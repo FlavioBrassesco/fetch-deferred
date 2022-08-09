@@ -2,7 +2,9 @@ import "./styles.css";
 import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 
-const fetchLoop = async (term, controller) => {
+const controller = new AbortController();
+
+const fetchLoop = async (term) => {
   let { data } = await axios.get("https://pokeapi.co/api/v2/pokemon", {
     signal: controller.signal
   });
@@ -19,32 +21,32 @@ export default function App() {
   const [pokemon, setPokemon] = useState([]);
   const [showList, setShowList] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  // timeout id reference for current fetch
   const timeoutRef = useRef(null);
-  const controllerRef = useRef(new AbortController());
 
   useEffect(() => {
+    controller.abort();
+    clearTimeout(timeoutRef.current);
     if (searchTerm) {
       timeoutRef.current = setTimeout(() => {
-        fetchLoop(searchTerm, controllerRef.current)
+        fetchLoop(searchTerm)
           .then((pokemon) => {
             setPokemon(pokemon);
+            setShowList(true);
           })
           .catch((e) => console.log(e.message));
       }, 500);
+    } else {
+      setPokemon([]);
+      setShowList(false);
     }
   }, [searchTerm]);
 
   const handleOnChange = async (e) => {
-    controllerRef.current.abort();
-    controllerRef.current = new AbortController();
-    clearTimeout(timeoutRef.current);
     if (e.target.value.length >= 3) {
       setSearchTerm(e.target.value);
-      setShowList(true);
     } else {
       setSearchTerm("");
-      setShowList(false);
-      setPokemon([]);
     }
   };
 
